@@ -71,6 +71,7 @@ const (
 	BOOLEAN
 	BTREE
 	CASCADE
+	CASE
 	CHAR
 	CHARACTER
 	CHARSET
@@ -98,6 +99,8 @@ const (
 	DOUBLE
 	DROP
 	DYNAMIC
+	ELSE
+	END
 	ENGINE
 	ENUM
 	EXISTS
@@ -165,6 +168,7 @@ const (
 	TABLESPACE
 	TEMPORARY
 	TEXT
+	THEN
 	TIME
 	TIMESTAMP
 	TINYBLOB
@@ -179,6 +183,7 @@ const (
 	USING
 	VARBINARY
 	VARCHAR
+	WHEN
 	WITH
 	YEAR
 	ZEROFILL
@@ -197,6 +202,7 @@ var keywordIdentMap = map[string]TokenType{
 	"BOOLEAN":            BOOLEAN,
 	"BTREE":              BTREE,
 	"CASCADE":            CASCADE,
+	"CASE":               CASE,
 	"CHAR":               CHAR,
 	"CHARACTER":          CHARACTER,
 	"CHARSET":            CHARSET,
@@ -224,6 +230,8 @@ var keywordIdentMap = map[string]TokenType{
 	"DOUBLE":             DOUBLE,
 	"DROP":               DROP,
 	"DYNAMIC":            DYNAMIC,
+	"ELSE":               ELSE,
+	"END":                END,
 	"ENGINE":             ENGINE,
 	"ENUM":               ENUM,
 	"EXISTS":             EXISTS,
@@ -291,6 +299,7 @@ var keywordIdentMap = map[string]TokenType{
 	"TABLESPACE":         TABLESPACE,
 	"TEMPORARY":          TEMPORARY,
 	"TEXT":               TEXT,
+	"THEN":               THEN,
 	"TIME":               TIME,
 	"TIMESTAMP":          TIMESTAMP,
 	"TINYBLOB":           TINYBLOB,
@@ -305,6 +314,7 @@ var keywordIdentMap = map[string]TokenType{
 	"USING":              USING,
 	"VARBINARY":          VARBINARY,
 	"VARCHAR":            VARCHAR,
+	"WHEN":               WHEN,
 	"WITH":               WITH,
 	"YEAR":               YEAR,
 	"ZEROFILL":           ZEROFILL,
@@ -378,6 +388,8 @@ func (t TokenType) String() string {
 		return "BTREE"
 	case CASCADE:
 		return "CASCADE"
+	case CASE:
+		return "CASE"
 	case CHAR:
 		return "CHAR"
 	case CHARACTER:
@@ -432,6 +444,10 @@ func (t TokenType) String() string {
 		return "DROP"
 	case DYNAMIC:
 		return "DYNAMIC"
+	case ELSE:
+		return "ELSE"
+	case END:
+		return "END"
 	case ENGINE:
 		return "ENGINE"
 	case ENUM:
@@ -566,6 +582,8 @@ func (t TokenType) String() string {
 		return "TEMPORARY"
 	case TEXT:
 		return "TEXT"
+	case THEN:
+		return "THEN"
 	case TIME:
 		return "TIME"
 	case TIMESTAMP:
@@ -594,6 +612,8 @@ func (t TokenType) String() string {
 		return "VARBINARY"
 	case VARCHAR:
 		return "VARCHAR"
+	case WHEN:
+		return "WHEN"
 	case WITH:
 		return "WITH"
 	case YEAR:

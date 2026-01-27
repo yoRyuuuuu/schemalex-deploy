@@ -1367,34 +1367,42 @@ func (p *Parser) parseColumnIndexColumns(ctx *parseCtx) ([]*model.IndexColumn, e
 OUTER:
 	for {
 		ctx.skipWhiteSpaces()
-		t := ctx.next()
-		if !(t.Type == IDENT || t.Type == BACKTICK_IDENT) {
-			return nil, newParseError(ctx, t, "should IDENT or BACKTICK_IDENT")
-		}
 
-		col := model.NewIndexColumn(model.Ident(t.Value))
-		cols = append(cols, col)
-
-		ctx.skipWhiteSpaces()
-		switch t = ctx.next(); t.Type {
+		var col *model.IndexColumn
+		switch t := ctx.peek(); t.Type {
 		case LPAREN:
-			t := ctx.next()
-			if t.Type != NUMBER {
-				return nil, newParseError(ctx, t, "expected NUMBER")
+			expr, err := p.parseColumnIndexExpression(ctx)
+			if err != nil {
+				return nil, err
 			}
-			tlen := t.Value
+			col = model.NewIndexColumnWithExpression(expr)
+		case IDENT, BACKTICK_IDENT:
+			ctx.advance()
+			col = model.NewIndexColumn(model.Ident(t.Value))
+
 			ctx.skipWhiteSpaces()
-			if t = ctx.next(); t.Type != RPAREN {
-				return nil, newParseError(ctx, t, "expected RPAREN")
+			switch t = ctx.next(); t.Type {
+			case LPAREN:
+				t := ctx.next()
+				if t.Type != NUMBER {
+					return nil, newParseError(ctx, t, "expected NUMBER")
+				}
+				tlen := t.Value
+				ctx.skipWhiteSpaces()
+				if t = ctx.next(); t.Type != RPAREN {
+					return nil, newParseError(ctx, t, "expected RPAREN")
+				}
+				col.Length.Valid = true
+				col.Length.Value = tlen
+			default:
+				ctx.rewind()
 			}
-			col.Length.Valid = true
-			col.Length.Value = tlen
 		default:
-			ctx.rewind()
+			return nil, newParseError(ctx, t, "should IDENT, BACKTICK_IDENT or LPAREN")
 		}
 
 		// optional sort direction
-		switch t = ctx.peek(); t.Type {
+		switch t := ctx.peek(); t.Type {
 		case ASC:
 			ctx.advance()
 			col.SortDirection = model.SortDirectionAscending
@@ -1403,8 +1411,10 @@ OUTER:
 			col.SortDirection = model.SortDirectionDescending
 		}
 
+		cols = append(cols, col)
+
 		ctx.skipWhiteSpaces()
-		switch t = ctx.next(); t.Type {
+		switch t := ctx.next(); t.Type {
 		case COMMA:
 			// search next
 			continue
@@ -1413,6 +1423,7 @@ OUTER:
 		default:
 			return nil, newParseError(ctx, t, "expected COMMA or RPAREN")
 		}
+
 	}
 
 	return cols, nil
@@ -1458,6 +1469,31 @@ func (p *Parser) parseColumnIndexOptionValue(ctx *parseCtx, index *model.Index, 
 		return nil
 	}
 	return newParseError(ctx, t, "expected %v", follow)
+}
+
+func (p *Parser) parseColumnIndexExpression(ctx *parseCtx) (string, error) {
+	if t := ctx.next(); t.Type != LPAREN {
+		return "", newParseError(ctx, t, "expected LPAREN")
+	}
+
+	startPos := ctx.peek().Pos
+	depth := 1
+
+	var t *Token
+	for depth > 0 {
+		t = ctx.next()
+		switch t.Type {
+		case LPAREN:
+			depth++
+		case RPAREN:
+			depth--
+		case EOF:
+			return "", newParseError(ctx, t, "unexpected EOF while parsing expression")
+		}
+	}
+
+	endPos := t.Pos
+	return string(ctx.input[startPos:endPos]), nil
 }
 
 // Skips over whitespaces. Once this method returns, you can be

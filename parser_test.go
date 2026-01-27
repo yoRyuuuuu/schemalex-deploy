@@ -262,6 +262,51 @@ func TestParse1(t *testing.T) {
 				},
 			},
 		},
+		{
+			src: "CREATE TABLE `t1` (\n" +
+				"`a` INTEGER,\n" +
+				"`b` BOOLEAN,\n" +
+				"UNIQUE KEY `idx1` ((CASE WHEN b THEN a ELSE NULL END))\n" +
+				");",
+			want: model.Stmts{
+				&model.Table{
+					Name: "t1",
+					Columns: []*model.TableColumn{
+						{
+							Name:    "a",
+							Type:    model.ColumnTypeInt,
+							Length:  model.NewLength("11"),
+							Default: model.DefaultValue{Valid: true, Value: "NULL"},
+						},
+						{
+							Name:    "b",
+							Type:    model.ColumnTypeTinyInt,
+							Length:  model.NewLength("1"),
+							Default: model.DefaultValue{Valid: true, Value: "NULL"},
+						},
+					},
+					Indexes: []*model.Index{
+						{
+							Table: "table#t1",
+							Kind:  model.IndexKindUnique,
+							Name: model.MaybeIdent{
+								Valid: true,
+								Ident: "idx1",
+							},
+							Columns: []*model.IndexColumn{
+								{
+									Expression: model.MaybeString{
+										Valid: true,
+										Value: "CASE WHEN b THEN a ELSE NULL END",
+									},
+								},
+							},
+						},
+					},
+					Options: []*model.TableOption{},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		p := schemalex.New()

@@ -107,11 +107,18 @@ type IndexColumn struct {
 	Name          Ident
 	Length        MaybeString
 	SortDirection IndexColumnSortDirection
+	Expression    MaybeString
 }
 
 func NewIndexColumn(name Ident) *IndexColumn {
 	return &IndexColumn{
 		Name: name,
+	}
+}
+
+func NewIndexColumnWithExpression(expr string) *IndexColumn {
+	return &IndexColumn{
+		Expression: MaybeString{Valid: true, Value: expr},
 	}
 }
 
