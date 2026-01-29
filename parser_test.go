@@ -72,7 +72,7 @@ func TestParse1(t *testing.T) {
 							Table: "table#fuga",
 							Kind:  model.IndexKindPrimaryKey,
 							Columns: []*model.IndexColumn{
-								{Name: "id"},
+								{Name: model.MaybeIdent{Valid: true, Ident: "id"}},
 							},
 						},
 						{
@@ -83,12 +83,12 @@ func TestParse1(t *testing.T) {
 								Valid: true,
 							},
 							Columns: []*model.IndexColumn{
-								{Name: "fid"},
+								{Name: model.MaybeIdent{Valid: true, Ident: "fid"}},
 							},
 							Reference: &model.Reference{
 								TableName: "f",
 								Columns: []*model.IndexColumn{
-									{Name: "id"},
+									{Name: model.MaybeIdent{Valid: true, Ident: "id"}},
 								},
 								OnDelete: model.ReferenceOptionCascade,
 								OnUpdate: model.ReferenceOptionCascade,
@@ -128,7 +128,7 @@ func TestParse1(t *testing.T) {
 							Table: "table#fuga",
 							Kind:  model.IndexKindPrimaryKey,
 							Columns: []*model.IndexColumn{
-								{Name: "id"},
+								{Name: model.MaybeIdent{Valid: true, Ident: "id"}},
 							},
 						},
 						{
@@ -139,12 +139,12 @@ func TestParse1(t *testing.T) {
 								Valid: true,
 							},
 							Columns: []*model.IndexColumn{
-								{Name: "fid"},
+								{Name: model.MaybeIdent{Valid: true, Ident: "fid"}},
 							},
 							Reference: &model.Reference{
 								TableName: "f",
 								Columns: []*model.IndexColumn{
-									{Name: "id"},
+									{Name: model.MaybeIdent{Valid: true, Ident: "id"}},
 								},
 								OnDelete: model.ReferenceOptionCascade,
 								OnUpdate: model.ReferenceOptionCascade,
@@ -192,14 +192,14 @@ func TestParse1(t *testing.T) {
 								Ident: "idx_point",
 							},
 							Columns: []*model.IndexColumn{
-								{Name: "point"},
+								{Name: model.MaybeIdent{Valid: true, Ident: "point"}},
 							},
 						},
 						{
 							Table: "table#fuga",
 							Kind:  model.IndexKindPrimaryKey,
 							Columns: []*model.IndexColumn{
-								{Name: "id"},
+								{Name: model.MaybeIdent{Valid: true, Ident: "id"}},
 							},
 						},
 					},
@@ -240,7 +240,7 @@ func TestParse1(t *testing.T) {
 								Ident: "title_idx",
 							},
 							Columns: []*model.IndexColumn{
-								{Name: "title"},
+								{Name: model.MaybeIdent{Valid: true, Ident: "title"}},
 							},
 							Options: []*model.IndexOption{
 								{
@@ -254,7 +254,7 @@ func TestParse1(t *testing.T) {
 							Table: "table#fuga",
 							Kind:  model.IndexKindPrimaryKey,
 							Columns: []*model.IndexColumn{
-								{Name: "id"},
+								{Name: model.MaybeIdent{Valid: true, Ident: "id"}},
 							},
 						},
 					},

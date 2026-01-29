@@ -104,7 +104,7 @@ func (stmt *Index) Normalize() *Index {
 
 // IndexColumn is a column name/length specification used in indexes
 type IndexColumn struct {
-	Name          Ident
+	Name          MaybeIdent
 	Length        MaybeString
 	SortDirection IndexColumnSortDirection
 	Expression    MaybeString
@@ -112,7 +112,7 @@ type IndexColumn struct {
 
 func NewIndexColumn(name Ident) *IndexColumn {
 	return &IndexColumn{
-		Name: name,
+		Name: MaybeIdent{Valid: true, Ident: name},
 	}
 }
 
@@ -123,7 +123,10 @@ func NewIndexColumnWithExpression(expr string) *IndexColumn {
 }
 
 func (col *IndexColumn) ID() string {
-	name := strings.ToLower(string(col.Name))
+	if col.Expression.Valid {
+		return "index_column#(" + col.Expression.Value + ")"
+	}
+	name := strings.ToLower(string(col.Name.Ident))
 	if col.Length.Valid {
 		return "index_column#" + name + "-" + col.Length.Value
 	}

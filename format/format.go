@@ -362,12 +362,21 @@ func formatIndex(ctx *fmtCtx, index *model.Index) error {
 	}
 
 	for i, col := range index.Columns {
-		buf.WriteString(col.Name.Quoted())
-		if col.Length.Valid {
+		if col.Expression.Valid {
 			buf.WriteByte('(')
-			buf.WriteString(col.Length.Value)
+			buf.WriteString(col.Expression.Value)
 			buf.WriteByte(')')
+		} else if col .Name.Valid {
+			buf.WriteString(col.Name.Quoted())
+			if col.Length.Valid {
+				buf.WriteByte('(')
+				buf.WriteString(col.Length.Value)
+				buf.WriteByte(')')
+			}
+		} else {
+			return fmt.Errorf("format: neither name nor expression is set in the index column of index %q", index.ID())
 		}
+
 		switch col.SortDirection {
 		case model.SortDirectionNone:
 			// nothing to do
