@@ -36,7 +36,14 @@ func SetupTestDB() (*sql.DB, func()) {
 	config := mysql.NewConfig()
 	config.User = user
 	config.Passwd = password
+	// FormatDSN writes the address only when Net is set,
+	// so SCHEMALEX_DATABASE_HOST is ignored without it.
+	config.Net = "tcp"
 	config.Addr = addr
+	// set SCHEMALEX_DATABASE_TLS to test against a server that requires TLS.
+	// "skip-verify" is usually the right value, because the certificate the
+	// server generates automatically is self-signed.
+	config.TLSConfig = os.Getenv("SCHEMALEX_DATABASE_TLS")
 	config.ParseTime = true
 	config.RejectReadOnly = true
 	config.Params = map[string]string{
