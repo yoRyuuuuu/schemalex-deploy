@@ -32,6 +32,32 @@ func TestUnmarshal(t *testing.T) {
 			},
 		},
 		{
+			// MySQL allows spaces around the "=" character, and deletes
+			// leading and trailing spaces from option names and values.
+			in: "[group]\nkey = value\n",
+			want: MyCnf{
+				"group": map[string]string{
+					"key": "value",
+				},
+			},
+		},
+		{
+			in: "[group]\nkey\t=\tvalue\n",
+			want: MyCnf{
+				"group": map[string]string{
+					"key": "value",
+				},
+			},
+		},
+		{
+			in: "[group]\nkey   \n",
+			want: MyCnf{
+				"group": map[string]string{
+					"key": "",
+				},
+			},
+		},
+		{
 			in: "[group]\nkey\n",
 			want: MyCnf{
 				"group": map[string]string{

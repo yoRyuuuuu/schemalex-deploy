@@ -178,7 +178,10 @@ LOOP:
 		buf.WriteRune(unicode.ToLower(ch))
 		p.Read()
 	}
-	return buf.String()
+	// MySQL deletes leading and trailing spaces from option names,
+	// so "ssl-mode = REQUIRED" has the option name "ssl-mode".
+	// https://dev.mysql.com/doc/refman/8.4/en/option-files.html
+	return strings.TrimRightFunc(buf.String(), isWhitespace)
 }
 
 func (p *parser) ParseOptionValue() string {
