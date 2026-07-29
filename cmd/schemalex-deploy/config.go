@@ -4,11 +4,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"os/user"
 	"runtime"
 	"strconv"
+	"strings"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/shogo82148/schemalex-deploy/mycnf"
 )
 
@@ -30,6 +33,7 @@ type config struct {
 	Password    string
 	Database    string
 	Port        int
+	TLS         string
 	Schema      []byte
 	AutoApprove bool
 	DryRun      bool
@@ -39,12 +43,38 @@ type config struct {
 // for testing
 var loadDefault = mycnf.LoadDefault
 
+// tlsFromSSLMode converts the mysql(1) --ssl-mode value into the value
+// the go-sql-driver/mysql accepts as Config.TLSConfig.
+// https://dev.mysql.com/doc/refman/8.0/en/connection-options.html#option_general_ssl-mode
+func tlsFromSSLMode(mode string) (string, error) {
+	switch strings.ToUpper(mode) {
+	case "DISABLED":
+		return "false", nil
+	case "PREFERRED":
+		return "preferred", nil
+	case "REQUIRED":
+		// the connection is encrypted, but the server certificate is not verified.
+		return "skip-verify", nil
+	case "VERIFY_IDENTITY":
+		// tls=true verifies both the certificate chain and the host name.
+		return "true", nil
+	case "VERIFY_CA":
+		// VERIFY_CA verifies the certificate chain but not the host name.
+		// The go-sql-driver/mysql cannot express it without registering a
+		// custom tls.Config, and tls=true would verify the host name too,
+		// rejecting a server that mysql(1) accepts.
+		return "", errors.New("ssl-mode=VERIFY_CA is not supported; use VERIFY_IDENTITY to verify the host name too, or REQUIRED to skip the verification")
+	}
+	return "", fmt.Errorf("invalid ssl-mode in the configure file: %q", mode)
+}
+
 func loadConfig(args []string) (*config, error) {
 	var cfn config
 	var version bool
 	var socket string
 	var host, username, password, database string
 	var port int
+	var tls string
 	var approve bool
 	var dryRun bool
 	var runImport bool
@@ -60,6 +90,7 @@ func loadConfig(args []string) (*config, error) {
 -user             username
 -password         password
 -database         the database name
+-tls              TLS mode: true, false, skip-verify, preferred
 -version          show the version
 -auto-approve     skips interactive approval of plan before deploying
 -dry-run          outputs the schema difference, and then exit the program
@@ -75,6 +106,7 @@ func loadConfig(args []string) (*config, error) {
 	flagSet.StringVar(&username, "user", "", "username")
 	flagSet.StringVar(&password, "password", "", "password")
 	flagSet.StringVar(&database, "database", "", "the database name")
+	flagSet.StringVar(&tls, "tls", "", "TLS mode for the connection (true, false, skip-verify, preferred)")
 	flagSet.BoolVar(&version, "version", false, "show the version")
 
 	// for schemalex-deploy
@@ -126,6 +158,15 @@ func loadConfig(args []string) (*config, error) {
 		if v, ok := client["database"]; ok {
 			cfn.Database = v
 		}
+		if v, ok := client["ssl-mode"]; ok {
+			// an unknown ssl-mode is an error rather than ignored;
+			// silently ignoring it would fall back to a plaintext connection.
+			mode, err := tlsFromSSLMode(v)
+			if err != nil {
+				return nil, err
+			}
+			cfn.TLS = mode
+		}
 	}
 
 	// load configure from the environment values
@@ -174,6 +215,33 @@ func loadConfig(args []string) (*config, error) {
 	if database != "" {
 		cfn.Database = database
 	}
+	if tls != "" {
+		// This tool never calls mysql.RegisterTLSConfig, so any other value
+		// would fail at connect time with a message about the TLS config
+		// registry, which says nothing about the -tls flag.
+		//
+		// Keep this list to the canonical spellings. The driver also treats
+		// "1", "TRUE" and "True" as full verification, and the unix domain
+		// socket check below only recognizes "true"; accepting the aliases
+		// here would let them slip past it.
+		switch tls {
+		case "true", "false", "skip-verify", "preferred":
+		default:
+			return nil, fmt.Errorf("invalid -tls value: %q (must be one of true, false, skip-verify, preferred)", tls)
+		}
+		cfn.TLS = tls
+	}
+
+	// The go-sql-driver/mysql derives tls.Config.ServerName from the address.
+	// A unix domain socket path has no host name to derive it from, so the
+	// driver leaves it empty and the handshake fails with an error that
+	// mentions neither the socket nor the TLS setting. Reject it here instead.
+	// A socket connection is local and protected by file permissions, so
+	// encrypting it adds no security.
+	// https://dev.mysql.com/doc/refman/8.4/en/using-encrypted-connections.html
+	if cfn.Socket != "" && cfn.TLS == "true" {
+		return nil, errors.New("TLS certificate verification is not supported with a unix domain socket, and encrypting a socket connection adds no security; remove -tls, or connect with -host to verify the certificate")
+	}
 
 	// deploy mode: load schema file
 	if cfn.Mode == ExecModeDeploy {
@@ -189,4 +257,28 @@ func loadConfig(args []string) (*config, error) {
 	}
 
 	return &cfn, nil
+}
+
+// dsn builds the data source name for the go-sql-driver/mysql.
+func (cfn *config) dsn() string {
+	c := mysql.NewConfig()
+	if cfn.Socket != "" {
+		c.Net = "unix"
+		c.Addr = cfn.Socket
+	} else {
+		c.Net = "tcp"
+		c.Addr = net.JoinHostPort(cfn.Host, strconv.Itoa(cfn.Port))
+	}
+	c.User = cfn.User
+	c.Passwd = cfn.Password
+	c.DBName = cfn.Database
+	c.TLSConfig = cfn.TLS
+	c.ParseTime = true
+	c.RejectReadOnly = true
+	c.Params = map[string]string{
+		"charset": "utf8mb4",
+		// kamipo TRADITIONAL http://www.songmu.jp/riji/entry/2015-07-08-kamipo-traditional.html
+		"sql_mode": "'TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'",
+	}
+	return c.FormatDSN()
 }

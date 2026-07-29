@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"runtime"
@@ -16,7 +15,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/shogo82148/schemalex-deploy/deploy"
 	"golang.org/x/term"
 )
@@ -43,26 +41,7 @@ func _main() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	config := mysql.NewConfig()
-	if cfn.Socket != "" {
-		config.Net = "unix"
-		config.Addr = cfn.Socket
-	} else {
-		config.Net = "tcp"
-		config.Addr = net.JoinHostPort(cfn.Host, strconv.Itoa(cfn.Port))
-	}
-	config.User = cfn.User
-	config.Passwd = cfn.Password
-	config.DBName = cfn.Database
-	config.ParseTime = true
-	config.RejectReadOnly = true
-	config.Params = map[string]string{
-		"charset": "utf8mb4",
-		// kamipo TRADITIONAL http://www.songmu.jp/riji/entry/2015-07-08-kamipo-traditional.html
-		"sql_mode": "'TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'",
-	}
-
-	db, err := deploy.Open("mysql", config.FormatDSN())
+	db, err := deploy.Open("mysql", cfn.dsn())
 	if err != nil {
 		return err
 	}
