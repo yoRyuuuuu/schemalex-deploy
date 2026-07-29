@@ -88,11 +88,40 @@ Enter a value: yes
 -user             username
 -password         password
 -database         the database name
+-tls              TLS mode: true, false, skip-verify, preferred
 -version          show the version
 -auto-approve     skips interactive approval of plan before deploying
 -dry-run          outputs the schema difference, and then exit the program
 -import           imports existing table schemas from running database
 ```
+
+### TLS
+
+The `-tls` option takes one of the following values. The values are passed to
+the [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) driver as-is.
+Without the option, the connection is not encrypted.
+
+| value | encrypted | server certificate |
+| --- | --- | --- |
+| `false` (default) | no | - |
+| `preferred` | yes, falls back to unencrypted if the server does not support TLS | not verified |
+| `skip-verify` | yes | not verified |
+| `true` | yes | verified, including the host name |
+
+`preferred` and `skip-verify` encrypt the connection but do not authenticate the
+server, so they do not protect against a man-in-the-middle.
+
+`true` verifies the certificate against the system trust store and requires the
+host name to match. It does not work with the self-signed certificate that MySQL
+generates automatically, because that certificate is signed by an unknown
+authority and carries no host name. There is no option to supply a CA
+certificate; a private CA requires the `deploy` package and
+`mysql.RegisterTLSConfig`.
+
+The `[client]` group of `my.cnf` is also read. `ssl-mode` accepts `DISABLED`,
+`PREFERRED`, `REQUIRED` and `VERIFY_IDENTITY`, following the semantics of
+`mysql(1)`. `VERIFY_CA` is rejected: it verifies the certificate chain without
+verifying the host name, which the driver cannot express.
 
 ## SEE ALSO
 
