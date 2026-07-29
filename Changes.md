@@ -3,6 +3,8 @@ Changes
 
 ## [unreleased]
 
+- support `-tls` option and my.cnf `ssl-mode`, to connect to a server that requires TLS such as Aurora MySQL 8.4
+- fix the option file parser to delete trailing spaces from option names, so that `key = value` is read
 - support removing indexes without their names [#68](https://github.com/shogo82148/schemalex-deploy/pull/68)
 
 ## [v0.0.7] - 2022-09-08
